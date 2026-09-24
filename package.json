@@ -2,11 +2,11 @@
   "name": "backend",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "server.js",
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "build" : "echo build",
+    "build": "echo build",
     "dev": "nodemon server.js"
   },
   "keywords": [],
