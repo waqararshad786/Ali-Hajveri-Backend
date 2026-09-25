@@ -3,7 +3,10 @@ import CV from "../models/CV.js";
 import jwt from "jsonwebtoken";
 import path from "path";
 import fs from "fs";
-import { sendCVConfirmationEmail } from "../utilis/email.js";
+import {
+  sendCVConfirmationEmail,
+  sendCVReplyEmail,           // ✅ ADD
+} from "../utilis/email.js";
 
 /* ============================================================
    SUBMIT CV — Public Route
@@ -25,7 +28,6 @@ export const submitCV = async (req, res) => {
       skills: req.body.skills,
       message: req.body.message,
 
-      /* ✅ FILE FIELDS */
       fileName: req.file?.originalname || "",
       filePath: req.file?.path || "",
       fileUrl: req.file?.path ? `/${req.file.path.replace(/\\/g, "/")}` : "",
@@ -35,10 +37,6 @@ export const submitCV = async (req, res) => {
 
     await cv.save();
 
-    /* ============================================================
-       ✅ USER CONFIRMATION EMAIL
-       — Candidate Ko Confirmation Email Bhejo
-    ============================================================ */
     sendCVConfirmationEmail({
       to: cv.email,
       name: cv.fullName,
@@ -64,16 +62,12 @@ export const getAllCVs = async (req, res) => {
 };
 
 /* ============================================================
-   ✅ GET CV FILE — Open / Download
-   — Admin Authorization Token From Header OR Query
-   — Browser New Tab Me Header Nahi Bhejta, Isliye Query Use Karte Hain
+   GET CV FILE — Open / Download
 ============================================================ */
 export const getCVFile = async (req, res) => {
   try {
-    /* ---------- Authorization Check ---------- */
     let token = null;
 
-    /* Header Se Token */
     if (
       req.headers.authorization &&
       req.headers.authorization.startsWith("Bearer ")
@@ -81,7 +75,6 @@ export const getCVFile = async (req, res) => {
       token = req.headers.authorization.split(" ")[1];
     }
 
-    /* Query Se Token — Fallback */
     if (!token && req.query.token) {
       token = req.query.token;
     }
@@ -90,14 +83,12 @@ export const getCVFile = async (req, res) => {
       return res.status(401).json({ message: "Not Authorized. Token Missing." });
     }
 
-    /* Token Verify */
     try {
       jwt.verify(token, process.env.JWT_SECRET);
     } catch (err) {
       return res.status(401).json({ message: "Invalid Or Expired Token" });
     }
 
-    /* ---------- Find CV ---------- */
     const cv = await CV.findById(req.params.id);
     if (!cv) return res.status(404).json({ message: "CV Not Found" });
 
@@ -106,36 +97,29 @@ export const getCVFile = async (req, res) => {
       return res.status(404).json({ message: "File Not Available" });
     }
 
-    /* Full URL Case */
     if (/^https?:\/\//i.test(filePath)) {
       return res.redirect(filePath);
     }
 
-    /* Local File Case */
     let absolutePath = filePath;
 
-    /* Remove Leading Slash Agar Hai */
     if (absolutePath.startsWith("/")) {
       absolutePath = absolutePath.substring(1);
     }
 
-    /* Agar Absolute Path Nahi To Add cwd */
     if (!path.isAbsolute(absolutePath)) {
       absolutePath = path.join(process.cwd(), absolutePath);
     }
 
-    /* File Exists Check */
     if (!fs.existsSync(absolutePath)) {
       console.error("File Not Found On Disk:", absolutePath);
       return res.status(404).json({ message: "File Missing On Server" });
     }
 
-    /* ---------- Download vs View ---------- */
     if (req.query.download === "1") {
       return res.download(absolutePath, cv.fileName || "cv.pdf");
     }
 
-    /* Inline View */
     res.setHeader("Content-Type", cv.mimeType || "application/pdf");
     res.setHeader(
       "Content-Disposition",
@@ -173,7 +157,6 @@ export const deleteCV = async (req, res) => {
     const cv = await CV.findByIdAndDelete(req.params.id);
     if (!cv) return res.status(404).json({ message: "CV Not Found" });
 
-    /* Delete File From Disk */
     if (cv.filePath) {
       let fileOnDisk = cv.filePath;
       if (fileOnDisk.startsWith("/")) fileOnDisk = fileOnDisk.substring(1);
@@ -191,6 +174,54 @@ export const deleteCV = async (req, res) => {
 
     res.json({ success: true, message: "CV Deleted" });
   } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/* ============================================================
+   ✅ REPLY TO CV — Admin Sends Email To Candidate
+============================================================ */
+export const replyToCV = async (req, res) => {
+  try {
+    const { replyMessage } = req.body;
+
+    if (!replyMessage || !replyMessage.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Reply message is required",
+      });
+    }
+
+    const cv = await CV.findById(req.params.id);
+    if (!cv) {
+      return res.status(404).json({
+        success: false,
+        message: "CV Application Not Found",
+      });
+    }
+
+    /* ✅ Send Reply Email */
+    await sendCVReplyEmail({
+      to: cv.email,
+      userName: cv.fullName,
+      replyMessage: replyMessage.trim(),
+      originalMessage: cv.message || "",
+      position: cv.position || "",
+    });
+
+    /* ✅ Save Reply + Update Status */
+    cv.replyMessage = replyMessage.trim();
+    cv.repliedAt = new Date();
+    cv.status = "replied";
+    await cv.save();
+
+    res.json({
+      success: true,
+      message: "Reply Sent Successfully",
+      cv,
+    });
+  } catch (err) {
+    console.error("Reply To CV Error:", err);
     res.status(500).json({ success: false, message: err.message });
   }
 };

@@ -29,11 +29,20 @@ const applicationSchema = new mongoose.Schema(
     fileSize: { type: Number, default: 0 },
     mimeType: { type: String, default: "" },
 
+    /* ============================================================
+       ✅ STATUS — "replied" ADD KIYA
+    ============================================================ */
     status: {
       type: String,
-      enum: ["new", "reviewed", "shortlisted", "rejected"],
+      enum: ["new", "reviewed", "shortlisted", "rejected", "replied"],
       default: "new",
     },
+
+    /* ============================================================
+       ✅ REPLY FIELDS — Admin Reply Track Karne Ke Liye
+    ============================================================ */
+    replyMessage: { type: String, default: "" },
+    repliedAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

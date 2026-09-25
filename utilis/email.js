@@ -81,7 +81,7 @@ const buildReplyHtml = ({
 
           <p style="margin:28px 0 0;color:#0F4C5C;font-weight:600;">
             Best Regards,<br>
-            <span style="color:#4FC3F7;">Customer Support Team</span><br>
+            <span style="color:#4FC3F7;">Recruitment Team</span><br>
             Ali Hajveri International (Pvt.) Ltd.
           </p>
         </td>
@@ -136,7 +136,7 @@ export const sendApplicationEmail = async (application) => {
               ${application.message ? `<h3 style="margin:20px 0 8px;color:#0F4C5C;font-size:14px;font-weight:700;">💬 Message</h3><p style="margin:0;background:#E1F5FE;padding:14px;border-radius:8px;font-size:13px;line-height:1.6;">${application.message}</p>` : ""}
               ${application.fileName ? `<h3 style="margin:20px 0 8px;color:#0F4C5C;font-size:14px;font-weight:700;">📎 CV File</h3><p style="margin:0;font-size:13px;font-weight:600;">${application.fileName}</p>` : ""}
               <div style="text-align:center;margin-top:28px;">
-                <a href="${process.env.CLIENT_URL}/admin/applications" style="display:inline-block;background:linear-gradient(135deg,#4FC3F7,#29B6F6);color:#0F4C5C;padding:12px 28px;border-radius:999px;text-decoration:none;font-weight:800;font-size:13px;">View In Admin Panel</a>
+                <a href="${process.env.CLIENT_URL}/admin/job-applications" style="display:inline-block;background:linear-gradient(135deg,#4FC3F7,#29B6F6);color:#0F4C5C;padding:12px 28px;border-radius:999px;text-decoration:none;font-weight:800;font-size:13px;">View In Admin Panel</a>
               </div>
             </td>
           </tr>
@@ -249,6 +249,66 @@ export const sendAdminReplyEmail = async ({
   return sendEmail({
     to,
     subject: subject || "Reply From Ali Hajveri International",
+    html,
+  });
+};
+
+/* ============================================================
+   7. ✅ ADMIN REPLY TO APPLICATION — Careers Page Applicants
+============================================================ */
+export const sendApplicationReplyEmail = async ({
+  to,
+  userName,
+  subject,
+  replyMessage,
+  originalMessage,
+  jobTitle,
+}) => {
+  const html = buildReplyHtml({
+    userName,
+    replyTitle: `Reply Regarding Your Application${
+      jobTitle ? ` — ${jobTitle}` : ""
+    }`,
+    replyMessage,
+    originalMessage,
+    originalLabel: "Your Original Application Message",
+  });
+
+  return sendEmail({
+    to,
+    subject:
+      subject ||
+      `Reply Regarding Your Application${jobTitle ? ` — ${jobTitle}` : ""}`,
+    html,
+  });
+};
+
+/* ============================================================
+   8. ✅ ADMIN REPLY TO CV — Submit CV Applicants
+============================================================ */
+export const sendCVReplyEmail = async ({
+  to,
+  userName,
+  subject,
+  replyMessage,
+  originalMessage,
+  position,
+}) => {
+  const html = buildReplyHtml({
+    userName,
+    replyTitle: `Reply Regarding Your CV${
+      position ? ` — ${position}` : ""
+    }`,
+    replyMessage,
+    originalMessage,
+    originalLabel: "Your Original CV Message",
+  });
+
+  return sendEmail({
+    to,
+    subject:
+      subject ||
+      `Reply Regarding Your CV${position ? ` — ${position}` : ""}`,
     html,
   });
 };

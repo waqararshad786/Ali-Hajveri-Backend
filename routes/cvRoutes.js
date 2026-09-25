@@ -6,33 +6,29 @@ import {
   getCVFile,
   updateCVStatus,
   deleteCV,
+  replyToCV,                    // ✅ ADD
 } from "../controllers/cvController.js";
 import { protect } from "../middlewares/auth.js";
 import { upload } from "../middlewares/upload.js";
 
 const router = express.Router();
 
-/* ============================================================
-   ROUTES
-============================================================ */
-
-// Submit CV — Public (Candidate Form)
+// Submit CV — Public
 router.post("/", upload.single("cvFile"), submitCV);
 
-// Get All CVs — Admin Only
+// Get All CVs — Admin
 router.get("/", protect, getAllCVs);
 
-/* ============================================================
-   ✅ CV FILE ROUTE
-   — Header Or Query Token Dono Accept Karta Hai
-   — Kyunke Browser New Tab Me Header Nahi Bhejta
-============================================================ */
+// CV File — Header or Query Token
 router.get("/:id/file", getCVFile);
 
-// Update Status — Admin Only
+/* ✅ REPLY ROUTE — Admin Sends Email To Candidate */
+router.post("/:id/reply", protect, replyToCV);
+
+// Update Status — Admin
 router.put("/:id", protect, updateCVStatus);
 
-// Delete — Admin Only
+// Delete — Admin
 router.delete("/:id", protect, deleteCV);
 
 export default router;
