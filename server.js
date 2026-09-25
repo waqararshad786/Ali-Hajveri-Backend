@@ -1,4 +1,3 @@
-
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -24,7 +23,8 @@ const PORT = process.env.PORT || 5000;
 
 connectDB();
 
-app.use(cors({
+app.use(
+  cors({
     origin: [
       "http://localhost:3000",
       "http://localhost:5173",
@@ -32,16 +32,13 @@ app.use(cors({
       process.env.CLIENT_URL,
     ].filter(Boolean),
     credentials: true,
-  })
+  }),
 );
 
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
-app.use(
-  "/uploads",
-  express.static(path.join(__dirname, "uploads"))
-);
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 app.get("/", (req, res) => {
   res.json({
@@ -58,42 +55,20 @@ app.get("/api/test", (req, res) => {
   });
 });
 
-app.get("/api/my-ip", async (req, res) => {
-  try {
-    const response = await fetch("https://api.ipify.org?format=json");
-    const data = await response.json();
-
-    res.json({
-      success: true,
-      ip: data.ip
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
-});
-
 app.get("/api/seed-now", async (req, res) => {
   try {
     const Admin = (await import("./models/Admin.js")).default;
     const bcrypt = (await import("bcryptjs")).default;
 
-    const username = (
-      process.env.ADMIN_USERNAME || "admin"
-    )
+    const username = (process.env.ADMIN_USERNAME || "admin")
       .toLowerCase()
       .trim();
 
-    const email = (
-      process.env.ADMIN_EMAIL || "admin@example.com"
-    )
+    const email = (process.env.ADMIN_EMAIL || "admin@example.com")
       .toLowerCase()
       .trim();
 
-    const password =
-      process.env.ADMIN_PASSWORD || "admin123";
+    const password = process.env.ADMIN_PASSWORD || "admin123";
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -139,5 +114,3 @@ app.use(errorHandler);
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
-
-
