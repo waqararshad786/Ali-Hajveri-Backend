@@ -1,4 +1,4 @@
-// // backend/server.js
+
 // import express from "express";
 // import cors from "cors";
 // import dotenv from "dotenv";
@@ -15,7 +15,6 @@
 // import { errorHandler } from "./middlewares/errorHandler.js";
 
 // dotenv.config();
-// connectDB();
 
 // const __filename = fileURLToPath(import.meta.url);
 // const __dirname = path.dirname(__filename);
@@ -23,8 +22,9 @@
 // const app = express();
 // const PORT = process.env.PORT || 5000;
 
-// app.use(
-//   cors({
+// connectDB();
+
+// app.use(cors({
 //     origin: [
 //       "http://localhost:3000",
 //       "http://localhost:5173",
@@ -34,13 +34,14 @@
 //     credentials: true,
 //   })
 // );
+
 // app.use(express.json({ limit: "10mb" }));
 // app.use(express.urlencoded({ extended: true }));
 
-// /* ============================================================
-//    ✅ STATIC UPLOADS — CV Files Directly Serve Karne Ke Liye
-// ============================================================ */
-// app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+// app.use(
+//   "/uploads",
+//   express.static(path.join(__dirname, "uploads"))
+// );
 
 // app.get("/", (req, res) => {
 //   res.json({
@@ -51,52 +52,64 @@
 // });
 
 // app.get("/api/test", (req, res) => {
-//   res.json({ success: true, message: "Backend is running with MongoDB!" });
+//   res.json({
+//     success: true,
+//     message: "Backend is running with MongoDB!",
+//   });
 // });
 
-// /* ============================================================
-//    SEED ROUTE — Admin Create/Reset
-// ============================================================ */
 // app.get("/api/seed-now", async (req, res) => {
 //   try {
 //     const Admin = (await import("./models/Admin.js")).default;
 //     const bcrypt = (await import("bcryptjs")).default;
 
-//     const username = (process.env.ADMIN_USERNAME || "admin").toLowerCase().trim();
-//     const email = (process.env.ADMIN_EMAIL || "admin@example.com").toLowerCase().trim();
-//     const hashedPassword = await bcrypt.hash(
-//       process.env.ADMIN_PASSWORD || "admin123",
-//       10
-//     );
+//     const username = (
+//       process.env.ADMIN_USERNAME || "admin"
+//     )
+//       .toLowerCase()
+//       .trim();
+
+//     const email = (
+//       process.env.ADMIN_EMAIL || "admin@example.com"
+//     )
+//       .toLowerCase()
+//       .trim();
+
+//     const password =
+//       process.env.ADMIN_PASSWORD || "admin123";
+
+//     const hashedPassword = await bcrypt.hash(password, 10);
 
 //     await Admin.deleteMany({});
-//     await Admin.create({ username, email, password: hashedPassword });
+
+//     await Admin.create({
+//       username,
+//       email,
+//       password: hashedPassword,
+//     });
 
 //     res.json({
 //       success: true,
 //       message: "Admin created/reset successfully!",
 //       username,
 //       email,
-//       password: process.env.ADMIN_PASSWORD,
 //     });
 //   } catch (error) {
 //     console.error("Seed error:", error);
-//     res.status(500).json({ success: false, message: error.message });
+
+//     res.status(500).json({
+//       success: false,
+//       message: error.message,
+//     });
 //   }
 // });
 
-// /* ============================================================
-//    API ROUTES
-// ============================================================ */
 // app.use("/api/auth", authRoutes);
 // app.use("/api/jobs", jobRoutes);
 // app.use("/api/applications", applicationRoutes);
 // app.use("/api/contact", contactRoutes);
 // app.use("/api/cv", cvRoutes);
 
-// /* ============================================================
-//    404 HANDLER
-// ============================================================ */
 // app.use((req, res) => {
 //   res.status(404).json({
 //     success: false,
@@ -106,8 +119,8 @@
 
 // app.use(errorHandler);
 
-// app.listen(PORT, () => {
-//   console.log(`🚀 Server running on http://localhost:${PORT}`);
+// app.listen(PORT, "0.0.0.0", () => {
+//   console.log(`🚀 Server running on port ${PORT}`);
 // });
 
 
@@ -136,86 +149,142 @@ const PORT = process.env.PORT || 5000;
 
 connectDB();
 
+// =========================
+// CORS
+// =========================
+
+const allowedOrigins = [
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "https://ali-hajveri-frontend-ocnb.vercel.app/",
+    process.env.CLIENT_URL,
+].filter(Boolean);
+
 app.use(
-  cors({
-    origin: [
-      "http://localhost:3000",
-      "http://localhost:5173",
-      "http://127.0.0.1:5173",
-      process.env.CLIENT_URL,
-    ].filter(Boolean),
-    credentials: true,
-  })
+    cors({
+        origin: function (origin, callback) {
+            if (!origin) {
+                return callback(null, true);
+            }
+
+            if (allowedOrigins.includes(origin)) {
+                return callback(null, true);
+            }
+
+            console.log("❌ CORS blocked:", origin);
+            return callback(new Error("Not allowed by CORS"));
+        },
+        methods: [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE",
+            "OPTIONS",
+        ],
+        allowedHeaders: [
+            "Content-Type",
+            "Authorization",
+        ],
+        credentials: true,
+    })
 );
+
+app.options("*", cors());
+
+// =========================
+// BODY PARSER
+// =========================
 
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
+// =========================
+// UPLOADS
+// =========================
+
 app.use(
-  "/uploads",
-  express.static(path.join(__dirname, "uploads"))
+    "/uploads",
+    express.static(path.join(__dirname, "uploads"))
 );
 
+// =========================
+// ROOT
+// =========================
+
 app.get("/", (req, res) => {
-  res.json({
-    success: true,
-    message: "AHIOEP Backend API is running",
-    timestamp: new Date().toISOString(),
-  });
+    res.json({
+        success: true,
+        message: "AHIOEP Backend API is running",
+        timestamp: new Date().toISOString(),
+    });
 });
+
+// =========================
+// TEST
+// =========================
 
 app.get("/api/test", (req, res) => {
-  res.json({
-    success: true,
-    message: "Backend is running with MongoDB!",
-  });
+    res.json({
+        success: true,
+        message: "Backend is running with MongoDB!",
+    });
 });
+
+// =========================
+// SEED ADMIN
+// =========================
 
 app.get("/api/seed-now", async (req, res) => {
-  try {
-    const Admin = (await import("./models/Admin.js")).default;
-    const bcrypt = (await import("bcryptjs")).default;
+    try {
+        const Admin = (await import("./models/Admin.js")).default;
+        const bcrypt = (await import("bcryptjs")).default;
 
-    const username = (
-      process.env.ADMIN_USERNAME || "admin"
-    )
-      .toLowerCase()
-      .trim();
+        const username = (
+            process.env.ADMIN_USERNAME || "admin"
+        )
+            .toLowerCase()
+            .trim();
 
-    const email = (
-      process.env.ADMIN_EMAIL || "admin@example.com"
-    )
-      .toLowerCase()
-      .trim();
+        const email = (
+            process.env.ADMIN_EMAIL || "admin@example.com"
+        )
+            .toLowerCase()
+            .trim();
 
-    const password =
-      process.env.ADMIN_PASSWORD || "admin123";
+        const password =
+            process.env.ADMIN_PASSWORD || "admin123";
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+        const hashedPassword = await bcrypt.hash(password, 10);
 
-    await Admin.deleteMany({});
+        await Admin.deleteMany({});
 
-    await Admin.create({
-      username,
-      email,
-      password: hashedPassword,
-    });
+        await Admin.create({
+            username,
+            email,
+            password: hashedPassword,
+        });
 
-    res.json({
-      success: true,
-      message: "Admin created/reset successfully!",
-      username,
-      email,
-    });
-  } catch (error) {
-    console.error("Seed error:", error);
+        res.json({
+            success: true,
+            message: "Admin created/reset successfully!",
+            username,
+            email,
+        });
+    } catch (error) {
+        console.error("Seed error:", error);
 
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
+        res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+    }
 });
+
+// =========================
+// API ROUTES
+// =========================
 
 app.use("/api/auth", authRoutes);
 app.use("/api/jobs", jobRoutes);
@@ -223,15 +292,28 @@ app.use("/api/applications", applicationRoutes);
 app.use("/api/contact", contactRoutes);
 app.use("/api/cv", cvRoutes);
 
+// =========================
+// 404
+// =========================
+
 app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    message: `Route not found: ${req.originalUrl}`,
-  });
+    res.status(404).json({
+        success: false,
+        message: `Route not found: ${req.originalUrl}`,
+    });
 });
+
+// =========================
+// ERROR HANDLER
+// =========================
 
 app.use(errorHandler);
 
+// =========================
+// START SERVER
+// =========================
+
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log("🌐 Allowed CORS origins:", allowedOrigins);
 });
