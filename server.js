@@ -58,6 +58,23 @@ app.get("/api/test", (req, res) => {
   });
 });
 
+app.get("/api/my-ip", async (req, res) => {
+  try {
+    const response = await fetch("https://api.ipify.org?format=json");
+    const data = await response.json();
+
+    res.json({
+      success: true,
+      ip: data.ip
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
 app.get("/api/seed-now", async (req, res) => {
   try {
     const Admin = (await import("./models/Admin.js")).default;
