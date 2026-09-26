@@ -1,15 +1,19 @@
+// backend/config/nodemailer.js
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 
 dotenv.config();
 
 const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || "smtp.gmail.com",
-  port: Number(process.env.EMAIL_PORT) || 587,
-  secure: false,
+  host: process.env.EMAIL_HOST || "smtpout.secureserver.net",
+  port: Number(process.env.EMAIL_PORT) || 465,
+  secure: true, // ✅ Port 465 ke liye TRUE
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
+  },
+  tls: {
+    rejectUnauthorized: false, // ✅ GoDaddy ke liye zaroori
   },
 });
 
