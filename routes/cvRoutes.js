@@ -6,7 +6,6 @@ import {
   getCVFile,
   updateCVStatus,
   deleteCV,
-  replyToCV,                    // ✅ ADD
 } from "../controllers/cvController.js";
 import { protect } from "../middlewares/auth.js";
 import { upload } from "../middlewares/upload.js";
@@ -21,9 +20,6 @@ router.get("/", protect, getAllCVs);
 
 // CV File — Header or Query Token
 router.get("/:id/file", getCVFile);
-
-/* ✅ REPLY ROUTE — Admin Sends Email To Candidate */
-router.post("/:id/reply", protect, replyToCV);
 
 // Update Status — Admin
 router.put("/:id", protect, updateCVStatus);

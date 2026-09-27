@@ -3,8 +3,8 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import Admin from "../models/Admin.js";
-import transporter from "../config/nodemailer.js";
-import { resetPasswordTemplate } from "../utilis/emailTemplates.js";
+// import transporter from "../config/nodemailer.js";
+// import { resetPasswordTemplate } from "../utilis/emailTemplates.js";
 
 const generateToken = (admin) => {
   return jwt.sign(

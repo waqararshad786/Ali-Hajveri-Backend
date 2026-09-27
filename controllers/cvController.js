@@ -3,13 +3,9 @@ import CV from "../models/CV.js";
 import jwt from "jsonwebtoken";
 import path from "path";
 import fs from "fs";
-import {
-  sendCVConfirmationEmail,
-  sendCVReplyEmail,           // ✅ ADD
-} from "../utilis/email.js";
 
 /* ============================================================
-   SUBMIT CV — Public Route
+   SUBMIT CV — Public Route (No Email)
 ============================================================ */
 export const submitCV = async (req, res) => {
   try {
@@ -36,11 +32,6 @@ export const submitCV = async (req, res) => {
     });
 
     await cv.save();
-
-    sendCVConfirmationEmail({
-      to: cv.email,
-      name: cv.fullName,
-    }).catch((err) => console.error("CV Confirmation Email Failed:", err));
 
     res.status(201).json({ success: true, cv });
   } catch (err) {
@@ -174,54 +165,6 @@ export const deleteCV = async (req, res) => {
 
     res.json({ success: true, message: "CV Deleted" });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
-
-/* ============================================================
-   ✅ REPLY TO CV — Admin Sends Email To Candidate
-============================================================ */
-export const replyToCV = async (req, res) => {
-  try {
-    const { replyMessage } = req.body;
-
-    if (!replyMessage || !replyMessage.trim()) {
-      return res.status(400).json({
-        success: false,
-        message: "Reply message is required",
-      });
-    }
-
-    const cv = await CV.findById(req.params.id);
-    if (!cv) {
-      return res.status(404).json({
-        success: false,
-        message: "CV Application Not Found",
-      });
-    }
-
-    /* ✅ Send Reply Email */
-    await sendCVReplyEmail({
-      to: cv.email,
-      userName: cv.fullName,
-      replyMessage: replyMessage.trim(),
-      originalMessage: cv.message || "",
-      position: cv.position || "",
-    });
-
-    /* ✅ Save Reply + Update Status */
-    cv.replyMessage = replyMessage.trim();
-    cv.repliedAt = new Date();
-    cv.status = "replied";
-    await cv.save();
-
-    res.json({
-      success: true,
-      message: "Reply Sent Successfully",
-      cv,
-    });
-  } catch (err) {
-    console.error("Reply To CV Error:", err);
     res.status(500).json({ success: false, message: err.message });
   }
 };

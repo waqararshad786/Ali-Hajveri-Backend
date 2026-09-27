@@ -1,13 +1,8 @@
 // backend/controllers/contactController.js
 import Contact from "../models/Contact.js";
-import {
-  sendContactEmail,
-  sendContactAcknowledgmentEmail,
-  sendAdminReplyEmail,
-} from "../utilis/email.js";
 
 /* ============================================================
-   SUBMIT CONTACT — Public Route
+   SUBMIT CONTACT — Public Route (No Email)
 ============================================================ */
 export const submitContact = async (req, res, next) => {
   try {
@@ -21,18 +16,8 @@ export const submitContact = async (req, res, next) => {
       message,
     });
 
-    /* Admin Notification */
-    sendContactEmail(contact).catch((err) =>
-      console.error("Admin Contact Notification Failed:", err)
-    );
-
-    /* User Acknowledgment */
-    sendContactAcknowledgmentEmail({
-      to: contact.email,
-      name: contact.name,
-    }).catch((err) =>
-      console.error("User Acknowledgment Email Failed:", err)
-    );
+    // ❌ Email disabled — GoDaddy Node.js Hosting pe SMTP blocked hai
+    // Admin dashboard ke Messages page pe contact directly show hoga
 
     res.status(201).json({
       success: true,
@@ -78,8 +63,9 @@ export const updateContactStatus = async (req, res, next) => {
 };
 
 /* ============================================================
-   ✅ REPLY TO CONTACT — Admin Sends Reply
-   — Admin Panel Se User Ko Direct Email
+   ✅ REPLY TO CONTACT — Admin Marks As Replied
+   — Email Nahi Jayegi (GoDaddy Block)
+   — Admin Ko Manually GoDaddy Webmail Se Reply Karna Hoga
 ============================================================ */
 export const replyToContact = async (req, res, next) => {
   try {
@@ -99,23 +85,7 @@ export const replyToContact = async (req, res, next) => {
         .json({ success: false, message: "Contact Not Found" });
     }
 
-    /* ✅ Send Email */
-    const result = await sendAdminReplyEmail({
-      to: contact.email,
-      userName: contact.name,
-      subject: `Re: ${contact.subject || "Your Inquiry"} — Ali Hajveri International`,
-      replyMessage: replyMessage.trim(),
-      originalMessage: contact.message,
-    });
-
-    if (!result.success) {
-      return res.status(500).json({
-        success: false,
-        message: "Failed To Send Email. Please Try Again.",
-      });
-    }
-
-    /* ✅ Update Contact */
+    /* ✅ Save Reply Locally (No Email) */
     contact.status = "replied";
     contact.replyMessage = replyMessage.trim();
     contact.repliedAt = new Date();
@@ -123,7 +93,7 @@ export const replyToContact = async (req, res, next) => {
 
     res.json({
       success: true,
-      message: "Reply Sent Successfully",
+      message: "Reply Saved Successfully (Email Disabled)",
       contact,
     });
   } catch (error) {

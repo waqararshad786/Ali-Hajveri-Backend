@@ -4,17 +4,12 @@ import Job from "../models/Job.js";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
-import {
-  sendApplicationEmail,
-  sendApplicationConfirmationEmail,
-  sendApplicationReplyEmail,        // ✅ ADD
-} from "../utilis/email.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /* ============================================================
-   SUBMIT APPLICATION
+   SUBMIT APPLICATION (No Email)
 ============================================================ */
 export const submitApplication = async (req, res, next) => {
   try {
@@ -48,14 +43,6 @@ export const submitApplication = async (req, res, next) => {
       fileSize: req.file?.size || 0,
       mimeType: req.file?.mimetype || "",
     });
-
-    sendApplicationEmail(application).catch((err) =>
-      console.error("Admin Email Failed:", err)
-    );
-
-    sendApplicationConfirmationEmail(application).catch((err) =>
-      console.error("User Confirmation Email Failed:", err)
-    );
 
     res.status(201).json({
       success: true,
@@ -157,7 +144,7 @@ export const getApplicationFile = async (req, res) => {
 export const updateApplicationStatus = async (req, res, next) => {
   try {
     const { status } = req.body;
-    const validStatuses = ["new", "reviewed", "shortlisted", "rejected", "replied", "pending"];
+    const validStatuses = ["new", "reviewed", "shortlisted", "rejected", "replied"];
 
     if (!validStatuses.includes(status)) {
       return res
@@ -195,53 +182,6 @@ export const deleteApplication = async (req, res, next) => {
         .json({ success: false, message: "Application Not Found" });
     }
     res.json({ success: true, message: "Application Deleted" });
-  } catch (error) {
-    next(error);
-  }
-};
-
-/* ============================================================
-   ✅ REPLY TO APPLICATION — Admin Sends Email To Candidate
-============================================================ */
-export const replyToApplication = async (req, res, next) => {
-  try {
-    const { replyMessage } = req.body;
-
-    if (!replyMessage || !replyMessage.trim()) {
-      return res.status(400).json({
-        success: false,
-        message: "Reply message is required",
-      });
-    }
-
-    const application = await Application.findById(req.params.id);
-    if (!application) {
-      return res.status(404).json({
-        success: false,
-        message: "Application Not Found",
-      });
-    }
-
-    /* ✅ Send Reply Email */
-    await sendApplicationReplyEmail({
-      to: application.email,
-      userName: application.fullName,
-      replyMessage: replyMessage.trim(),
-      originalMessage: application.message || "",
-      jobTitle: application.jobTitle || application.position || "",
-    });
-
-    /* ✅ Save Reply + Update Status */
-    application.replyMessage = replyMessage.trim();
-    application.repliedAt = new Date();
-    application.status = "replied";
-    await application.save();
-
-    res.json({
-      success: true,
-      message: "Reply Sent Successfully",
-      application,
-    });
   } catch (error) {
     next(error);
   }
