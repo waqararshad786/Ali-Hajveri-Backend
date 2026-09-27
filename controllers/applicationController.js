@@ -14,32 +14,40 @@ const __dirname = path.dirname(__filename);
 export const submitApplication = async (req, res, next) => {
   try {
     const {
-      jobId, fullName, email, phone, country, city,
-      experience, education, skills, message,
+      jobId,
+      fullName,
+      email,
+      phone,
+      country,
+      city,
+      experience,
+      education,
+      skills,
+      message,
     } = req.body;
 
     const job = await Job.findById(jobId);
     if (!job) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Job Not Found" });
+      return res.status(404).json({ success: false, message: "Job Not Found" });
     }
 
     const application = await Application.create({
       jobId: job._id,
       jobTitle: job.title,
       company: job.company,
-      fullName, email, phone, country,
+      fullName,
+      email,
+      phone,
+      country,
       city: city || "",
-      experience, education,
+      experience,
+      education,
       skills: skills || "",
       message: message || "",
 
       fileName: req.file?.originalname || "",
       filePath: req.file?.path || "",
-      fileUrl: req.file?.path
-        ? `/${req.file.path.replace(/\\/g, "/")}`
-        : "",
+      fileUrl: req.file?.path ? `/${req.file.path.replace(/\\/g, "/")}` : "",
       fileSize: req.file?.size || 0,
       mimeType: req.file?.mimetype || "",
     });
@@ -87,19 +95,13 @@ export const getApplicationFile = async (req, res) => {
     }
 
     const filePath =
-      application.filePath ||
-      application.cvFilePath ||
-      application.cvFile;
+      application.filePath || application.cvFilePath || application.cvFile;
 
     const fileName =
-      application.fileName ||
-      application.cvFileName ||
-      "resume.pdf";
+      application.fileName || application.cvFileName || "resume.pdf";
 
     const mimeType =
-      application.mimeType ||
-      application.cvMimeType ||
-      "application/pdf";
+      application.mimeType || application.cvMimeType || "application/pdf";
 
     if (!filePath) {
       return res.status(404).json({
@@ -126,7 +128,7 @@ export const getApplicationFile = async (req, res) => {
     res.setHeader("Content-Type", mimeType);
     res.setHeader(
       "Content-Disposition",
-      `inline; filename="${encodeURIComponent(fileName)}"`
+      `inline; filename="${encodeURIComponent(fileName)}"`,
     );
     return res.sendFile(absolutePath);
   } catch (err) {
@@ -144,7 +146,13 @@ export const getApplicationFile = async (req, res) => {
 export const updateApplicationStatus = async (req, res, next) => {
   try {
     const { status } = req.body;
-    const validStatuses = ["new", "reviewed", "shortlisted", "rejected", "replied"];
+    const validStatuses = [
+      "new",
+      "reviewed",
+      "shortlisted",
+      "rejected",
+      "replied",
+    ];
 
     if (!validStatuses.includes(status)) {
       return res
@@ -155,7 +163,7 @@ export const updateApplicationStatus = async (req, res, next) => {
     const application = await Application.findByIdAndUpdate(
       req.params.id,
       { status },
-      { returnDocument: "after" }
+      { returnDocument: "after" },
     );
 
     if (!application) {

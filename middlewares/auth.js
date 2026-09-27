@@ -9,9 +9,8 @@ export const protect = (req, res, next) => {
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith("Bearer ")) {
       token = authHeader.split(" ")[1];
-    }
+    } else if (req.query.token) {
     /* ✅ 2. Query Param Se Token (File Download / View Ke Liye) */
-    else if (req.query.token) {
       token = req.query.token;
     }
 
