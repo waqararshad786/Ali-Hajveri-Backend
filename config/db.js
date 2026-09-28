@@ -1,3 +1,4 @@
+// backend/config/db.js
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 
@@ -5,7 +6,11 @@ dotenv.config();
 
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI);
+    const mongoURI =
+      process.env.MONGODB_URI ||
+      "mongodb+srv://ahioepcom_db_user:ahioep@cluster0.pnbgu0u.mongodb.net/ahioep?appName=Cluster0";
+
+    const conn = await mongoose.connect(mongoURI);
     console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
     console.log(`📊 Database: ${conn.connection.name}`);
   } catch (error) {
