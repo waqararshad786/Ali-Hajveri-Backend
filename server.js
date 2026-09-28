@@ -23,17 +23,45 @@ const PORT = process.env.PORT || 5000;
 
 connectDB();
 
-app.use(
-  cors({
-    origin: [
-      "https://ahioep.com",
-      "http://localhost:3000",
-      "http://localhost:5173",
-      "http://127.0.0.1:5173",
-    ].filter(Boolean),
-    credentials: true,
-  }),
-);
+// ---------- CORS CONFIG ----------
+const allowedOrigins = [
+  "https://ahioep.com",
+  "https://www.ahioep.com",
+  "http://localhost:3000",
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+];
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, Postman, curl)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    console.warn(`❌ CORS blocked for origin: ${origin}`);
+    return callback(new Error(`Not allowed by CORS: ${origin}`));
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "X-Requested-With",
+    "Accept",
+    "Origin",
+  ],
+  exposedHeaders: ["Authorization"],
+  optionsSuccessStatus: 200,
+};
+
+app.use(cors(corsOptions));
+
+// Handle preflight requests explicitly
+app.options("*", cors(corsOptions));
+// ----------------------------------
 
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
