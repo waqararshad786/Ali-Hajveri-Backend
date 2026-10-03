@@ -68,15 +68,8 @@ const wrapEmail = (content) => `
 </html>
 `;
 
-const successIcon = `
-<div style="text-align:center;margin-bottom:24px;">
-  <div style="display:inline-flex;align-items:center;justify-content:center;width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#4FC3F7 0%,#29B6F6 100%);box-shadow:0 12px 30px rgba(79,195,247,0.4);">
-    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M20 6L9 17L4 12" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
-  </div>
-</div>
-`;
+/* ✅ SUCCESS ICON — KHALI (Blue dot hatane ke liye) */
+const successIcon = ``;
 
 /* ============================================================
    1. PASSWORD RESET TEMPLATE

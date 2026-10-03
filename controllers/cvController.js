@@ -3,7 +3,10 @@ import CV from "../models/CV.js";
 import jwt from "jsonwebtoken";
 import path from "path";
 import fs from "fs";
-import sendEmail, { sendCVConfirmationEmail } from "../utilis/email.js";
+import sendEmail, {
+  sendCVConfirmationEmail,
+  sendCVReplyEmail,
+} from "../utilis/email.js";
 
 /* ============================================================
    SUBMIT CV — Public Route (WITH EMAIL)
@@ -201,6 +204,66 @@ export const updateCVStatus = async (req, res) => {
     res.json({ success: true, cv });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/* ============================================================
+   ✅ REPLY TO CV — Admin Sends Email Reply
+============================================================ */
+export const replyToCV = async (req, res, next) => {
+  try {
+    const { replyMessage } = req.body;
+
+    if (!replyMessage || !replyMessage.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Reply Message Is Required",
+      });
+    }
+
+    const cv = await CV.findById(req.params.id);
+    if (!cv) {
+      return res.status(404).json({
+        success: false,
+        message: "CV Not Found",
+      });
+    }
+
+    /* ============================================================
+       📧 SEND REPLY EMAIL TO CANDIDATE
+       ============================================================ */
+    let emailSent = false;
+    try {
+      const result = await sendCVReplyEmail({
+        to: cv.email,
+        userName: cv.fullName,
+        subject: `Reply Regarding Your CV — ${cv.position}`,
+        replyMessage: replyMessage.trim(),
+        originalMessage: cv.message,
+        position: cv.position,
+      });
+      emailSent = result.success;
+    } catch (emailError) {
+      console.error("⚠️ CV reply email failed:", emailError);
+    }
+
+    /* ✅ Save Reply In Database */
+    cv.status = "replied";
+    cv.replyMessage = replyMessage.trim();
+    cv.repliedAt = new Date();
+    await cv.save();
+
+    res.json({
+      success: true,
+      message: emailSent
+        ? "Reply Sent Successfully"
+        : "Reply Saved (Email Failed — Check Logs)",
+      emailSent,
+      cv,
+    });
+  } catch (error) {
+    console.error("CV Reply Error:", error);
+    next(error);
   }
 };
 

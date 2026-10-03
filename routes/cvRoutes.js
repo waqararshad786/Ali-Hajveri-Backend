@@ -6,6 +6,7 @@ import {
   getCVFile,
   updateCVStatus,
   deleteCV,
+  replyToCV,  // ✅ ADD KARO
 } from "../controllers/cvController.js";
 import { protect } from "../middlewares/auth.js";
 import { upload } from "../middlewares/upload.js";
@@ -23,6 +24,9 @@ router.get("/:id/file", getCVFile);
 
 // Update Status — Admin
 router.put("/:id", protect, updateCVStatus);
+
+/* ✅ REPLY ROUTE — MUST BE BEFORE /:id (DELETE) */
+router.post("/:id/reply", protect, replyToCV);
 
 // Delete — Admin
 router.delete("/:id", protect, deleteCV);

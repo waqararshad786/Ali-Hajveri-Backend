@@ -7,6 +7,7 @@ import { fileURLToPath } from "url";
 import {
   sendApplicationEmail,
   sendApplicationConfirmationEmail,
+  sendApplicationReplyEmail,
 } from "../utilis/email.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -60,10 +61,9 @@ export const submitApplication = async (req, res, next) => {
        📧 SEND EMAILS (After DB save — errors non-blocking)
        ============================================================ */
 
-    // 1️⃣ Confirmation email to candidate
     try {
       await sendApplicationConfirmationEmail({
-        fullName: application.fullName,
+        name: application.fullName,
         email: application.email,
         jobTitle: application.jobTitle,
         company: application.company,
@@ -73,7 +73,6 @@ export const submitApplication = async (req, res, next) => {
       console.error("⚠️ Candidate confirmation email failed:", emailError);
     }
 
-    // 2️⃣ Notification email to admin
     try {
       await sendApplicationEmail({
         jobTitle: application.jobTitle,
@@ -189,6 +188,7 @@ export const updateApplicationStatus = async (req, res, next) => {
     const { status } = req.body;
     const validStatuses = [
       "new",
+      "pending",
       "reviewed",
       "shortlisted",
       "rejected",
@@ -215,6 +215,66 @@ export const updateApplicationStatus = async (req, res, next) => {
 
     res.json({ success: true, application });
   } catch (error) {
+    next(error);
+  }
+};
+
+/* ============================================================
+   ✅ REPLY TO APPLICATION — Admin Sends Email Reply
+============================================================ */
+export const replyToApplication = async (req, res, next) => {
+  try {
+    const { replyMessage } = req.body;
+
+    if (!replyMessage || !replyMessage.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Reply Message Is Required",
+      });
+    }
+
+    const application = await Application.findById(req.params.id);
+    if (!application) {
+      return res.status(404).json({
+        success: false,
+        message: "Application Not Found",
+      });
+    }
+
+    /* ============================================================
+       📧 SEND REPLY EMAIL TO APPLICANT
+       ============================================================ */
+    let emailSent = false;
+    try {
+      const result = await sendApplicationReplyEmail({
+        to: application.email,
+        userName: application.fullName,
+        subject: `Reply Regarding Your Application — ${application.jobTitle}`,
+        replyMessage: replyMessage.trim(),
+        originalMessage: application.message,
+        jobTitle: application.jobTitle,
+      });
+      emailSent = result.success;
+    } catch (emailError) {
+      console.error("⚠️ Application reply email failed:", emailError);
+    }
+
+    /* ✅ Save Reply In Database */
+    application.status = "replied";
+    application.replyMessage = replyMessage.trim();
+    application.repliedAt = new Date();
+    await application.save();
+
+    res.json({
+      success: true,
+      message: emailSent
+        ? "Reply Sent Successfully"
+        : "Reply Saved (Email Failed — Check Logs)",
+      emailSent,
+      application,
+    });
+  } catch (error) {
+    console.error("Application Reply Error:", error);
     next(error);
   }
 };

@@ -6,6 +6,7 @@ import {
   updateApplicationStatus,
   deleteApplication,
   getApplicationFile,
+  replyToApplication,  // ✅ ADD KARO
 } from "../controllers/applicationController.js";
 import { protect } from "../middlewares/auth.js";
 import { validateApplication } from "../middlewares/validation.js";
@@ -27,6 +28,10 @@ router.get("/", protect, getAllApplications);
 router.get("/:id/file", protect, getApplicationFile);
 
 router.put("/:id", protect, updateApplicationStatus);
+
+/* ✅ REPLY ROUTE — MUST BE BEFORE /:id (DELETE) */
+router.post("/:id/reply", protect, replyToApplication);
+
 router.delete("/:id", protect, deleteApplication);
 
 export default router;
