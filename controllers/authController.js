@@ -3,8 +3,8 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import Admin from "../models/Admin.js";
-// import transporter from "../config/nodemailer.js";
-// import { resetPasswordTemplate } from "../utilis/emailTemplates.js";
+import sendEmail from "../utilis/email.js";
+import { resetPasswordTemplate } from "../utilis/emailTemplates.js";
 
 const generateToken = (admin) => {
   return jwt.sign(
@@ -121,7 +121,7 @@ export const getMe = async (req, res, next) => {
 };
 
 /* ============================================================
-   ✅ UPDATE PROFILE — Username + Email Dono
+   UPDATE PROFILE — Username + Email Dono
 ============================================================ */
 export const updateProfile = async (req, res, next) => {
   try {
@@ -139,14 +139,12 @@ export const updateProfile = async (req, res, next) => {
         .json({ success: false, message: "Email Is Required" });
     }
 
-    /* Email Format Check */
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
       return res
         .status(400)
         .json({ success: false, message: "Invalid Email Format" });
     }
 
-    /* Check Email Not Taken By Another Admin */
     const existing = await Admin.findOne({
       email: email.trim().toLowerCase(),
       _id: { $ne: req.admin.id },
@@ -226,7 +224,7 @@ export const updatePassword = async (req, res, next) => {
 };
 
 /* ============================================================
-   FORGOT PASSWORD
+   FORGOT PASSWORD — SendGrid
 ============================================================ */
 export const forgotPassword = async (req, res, next) => {
   try {
@@ -253,14 +251,21 @@ export const forgotPassword = async (req, res, next) => {
 
     const resetUrl = `${process.env.CLIENT_URL}/admin/reset-password/${token}`;
 
+    /* ============================================================
+       📧 SEND RESET EMAIL via SendGrid
+       ============================================================ */
     try {
-      await transporter.sendMail({
-        from: process.env.EMAIL_FROM,
+      const result = await sendEmail({
         to: admin.email,
         subject: "🔐 Password Reset - Ali Hajveri International",
         html: resetPasswordTemplate(resetUrl, admin.username),
       });
-      console.log("✅ Reset Email Sent To:", admin.email);
+
+      if (result.success) {
+        console.log("✅ Reset Email Sent To:", admin.email);
+      } else {
+        console.error("❌ Reset Email Failed:", result.error);
+      }
     } catch (emailErr) {
       console.error("❌ Reset Email Failed:", emailErr.message);
     }

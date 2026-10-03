@@ -1,8 +1,13 @@
 // backend/controllers/contactController.js
 import Contact from "../models/Contact.js";
+import {
+  sendContactEmail,
+  sendContactAcknowledgmentEmail,
+  sendAdminReplyEmail,
+} from "../utilis/email.js";
 
 /* ============================================================
-   SUBMIT CONTACT — Public Route (No Email)
+   SUBMIT CONTACT — Public Route (WITH EMAIL)
 ============================================================ */
 export const submitContact = async (req, res, next) => {
   try {
@@ -16,8 +21,32 @@ export const submitContact = async (req, res, next) => {
       message,
     });
 
-    // ❌ Email disabled — GoDaddy Node.js Hosting pe SMTP blocked hai
-    // Admin dashboard ke Messages page pe contact directly show hoga
+    /* ============================================================
+       📧 SEND EMAILS (After DB save — errors non-blocking)
+       ============================================================ */
+
+    // 1️⃣ Acknowledgment email to user
+    try {
+      await sendContactAcknowledgmentEmail({
+        to: contact.email,
+        name: contact.name,
+      });
+    } catch (emailError) {
+      console.error("⚠️ User contact acknowledgment failed:", emailError);
+    }
+
+    // 2️⃣ Notification email to admin
+    try {
+      await sendContactEmail({
+        name: contact.name,
+        email: contact.email,
+        phone: contact.phone,
+        subject: contact.subject,
+        message: contact.message,
+      });
+    } catch (emailError) {
+      console.error("⚠️ Admin contact notification failed:", emailError);
+    }
 
     res.status(201).json({
       success: true,
@@ -63,9 +92,7 @@ export const updateContactStatus = async (req, res, next) => {
 };
 
 /* ============================================================
-   ✅ REPLY TO CONTACT — Admin Marks As Replied
-   — Email Nahi Jayegi (GoDaddy Block)
-   — Admin Ko Manually GoDaddy Webmail Se Reply Karna Hoga
+   REPLY TO CONTACT — Admin Sends Reply Via SendGrid
 ============================================================ */
 export const replyToContact = async (req, res, next) => {
   try {
@@ -85,7 +112,24 @@ export const replyToContact = async (req, res, next) => {
         .json({ success: false, message: "Contact Not Found" });
     }
 
-    /* ✅ Save Reply Locally (No Email) */
+    /* ============================================================
+       📧 SEND REPLY EMAIL TO USER (Via SendGrid)
+       ============================================================ */
+    let emailSent = false;
+    try {
+      const result = await sendAdminReplyEmail({
+        to: contact.email,
+        userName: contact.name,
+        subject: `Reply From Ali Hajveri International — ${contact.subject || "Your Message"}`,
+        replyMessage: replyMessage.trim(),
+        originalMessage: contact.message,
+      });
+      emailSent = result.success;
+    } catch (emailError) {
+      console.error("⚠️ Reply email failed:", emailError);
+    }
+
+    /* ✅ Save Reply In Database */
     contact.status = "replied";
     contact.replyMessage = replyMessage.trim();
     contact.repliedAt = new Date();
@@ -93,7 +137,10 @@ export const replyToContact = async (req, res, next) => {
 
     res.json({
       success: true,
-      message: "Reply Saved Successfully (Email Disabled)",
+      message: emailSent
+        ? "Reply Sent Successfully"
+        : "Reply Saved (Email Failed — Check Logs)",
+      emailSent,
       contact,
     });
   } catch (error) {

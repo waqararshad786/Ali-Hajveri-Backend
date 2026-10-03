@@ -4,12 +4,16 @@ import Job from "../models/Job.js";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
+import {
+  sendApplicationEmail,
+  sendApplicationConfirmationEmail,
+} from "../utilis/email.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /* ============================================================
-   SUBMIT APPLICATION (No Email)
+   SUBMIT APPLICATION (WITH EMAIL)
 ============================================================ */
 export const submitApplication = async (req, res, next) => {
   try {
@@ -51,6 +55,43 @@ export const submitApplication = async (req, res, next) => {
       fileSize: req.file?.size || 0,
       mimeType: req.file?.mimetype || "",
     });
+
+    /* ============================================================
+       📧 SEND EMAILS (After DB save — errors non-blocking)
+       ============================================================ */
+
+    // 1️⃣ Confirmation email to candidate
+    try {
+      await sendApplicationConfirmationEmail({
+        fullName: application.fullName,
+        email: application.email,
+        jobTitle: application.jobTitle,
+        company: application.company,
+        country: application.country,
+      });
+    } catch (emailError) {
+      console.error("⚠️ Candidate confirmation email failed:", emailError);
+    }
+
+    // 2️⃣ Notification email to admin
+    try {
+      await sendApplicationEmail({
+        jobTitle: application.jobTitle,
+        company: application.company,
+        fullName: application.fullName,
+        email: application.email,
+        phone: application.phone,
+        country: application.country,
+        city: application.city,
+        experience: application.experience,
+        education: application.education,
+        skills: application.skills,
+        message: application.message,
+        fileName: application.fileName,
+      });
+    } catch (emailError) {
+      console.error("⚠️ Admin notification email failed:", emailError);
+    }
 
     res.status(201).json({
       success: true,

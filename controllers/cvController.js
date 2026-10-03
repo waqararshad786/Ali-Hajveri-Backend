@@ -3,9 +3,10 @@ import CV from "../models/CV.js";
 import jwt from "jsonwebtoken";
 import path from "path";
 import fs from "fs";
+import sendEmail, { sendCVConfirmationEmail } from "../utilis/email.js";
 
 /* ============================================================
-   SUBMIT CV — Public Route (No Email)
+   SUBMIT CV — Public Route (WITH EMAIL)
 ============================================================ */
 export const submitCV = async (req, res) => {
   try {
@@ -32,6 +33,69 @@ export const submitCV = async (req, res) => {
     });
 
     await cv.save();
+
+    /* ============================================================
+       📧 SEND EMAILS (After DB save — errors non-blocking)
+       ============================================================ */
+
+    // 1️⃣ Confirmation email to candidate
+    try {
+      await sendCVConfirmationEmail({
+        to: cv.email,
+        name: cv.fullName,
+      });
+    } catch (emailError) {
+      console.error("⚠️ Candidate CV confirmation email failed:", emailError);
+    }
+
+    // 2️⃣ Notification email to admin
+    try {
+      await sendEmail({
+        to: process.env.ADMIN_NOTIFY_EMAIL || process.env.ADMIN_EMAIL,
+        subject: `📄 New CV Submission — ${cv.fullName}`,
+        html: `
+          <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#F0F7FA;padding:24px 0;">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 8px 24px rgba(15,76,92,0.08);">
+              <tr>
+                <td style="background:linear-gradient(135deg,#0F4C5C 0%,#0A3A47 100%);padding:28px 24px;text-align:center;">
+                  <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:800;">📄 New CV Submitted</h1>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:28px;color:#0A3A47;font-size:14px;line-height:1.7;">
+                  <div style="background:#E1F5FE;border-left:4px solid #4FC3F7;border-radius:8px;padding:16px 20px;margin-bottom:20px;">
+                    <p style="margin:0 0 6px;color:#0F4C5C;font-size:11px;font-weight:700;text-transform:uppercase;">Position Applied For</p>
+                    <p style="margin:0;font-size:16px;font-weight:800;">${cv.position}</p>
+                  </div>
+                  <h3 style="margin:0 0 12px;color:#0F4C5C;font-size:14px;font-weight:700;">👤 Candidate Details</h3>
+                  <table cellspacing="0" cellpadding="0" style="width:100%;font-size:13px;">
+                    <tr><td style="padding:6px 0;color:#64748b;width:140px;">Full Name</td><td style="padding:6px 0;font-weight:600;">${cv.fullName}</td></tr>
+                    <tr><td style="padding:6px 0;color:#64748b;">Email</td><td style="padding:6px 0;font-weight:600;">${cv.email}</td></tr>
+                    <tr><td style="padding:6px 0;color:#64748b;">Phone</td><td style="padding:6px 0;font-weight:600;">${cv.phone}</td></tr>
+                    ${cv.whatsapp ? `<tr><td style="padding:6px 0;color:#64748b;">WhatsApp</td><td style="padding:6px 0;font-weight:600;">${cv.whatsapp}</td></tr>` : ""}
+                    ${cv.city ? `<tr><td style="padding:6px 0;color:#64748b;">City</td><td style="padding:6px 0;font-weight:600;">${cv.city}</td></tr>` : ""}
+                    <tr><td style="padding:6px 0;color:#64748b;">Country</td><td style="padding:6px 0;font-weight:600;">${cv.country}</td></tr>
+                    <tr><td style="padding:6px 0;color:#64748b;">Category</td><td style="padding:6px 0;font-weight:600;">${cv.category}</td></tr>
+                    ${cv.experience ? `<tr><td style="padding:6px 0;color:#64748b;">Experience</td><td style="padding:6px 0;font-weight:600;">${cv.experience}</td></tr>` : ""}
+                    ${cv.education ? `<tr><td style="padding:6px 0;color:#64748b;">Education</td><td style="padding:6px 0;font-weight:600;">${cv.education}</td></tr>` : ""}
+                    ${cv.passport ? `<tr><td style="padding:6px 0;color:#64748b;">Passport</td><td style="padding:6px 0;font-weight:600;">${cv.passport}</td></tr>` : ""}
+                    ${cv.skills ? `<tr><td style="padding:6px 0;color:#64748b;">Skills</td><td style="padding:6px 0;font-weight:600;">${cv.skills}</td></tr>` : ""}
+                  </table>
+                  ${cv.message ? `<h3 style="margin:20px 0 8px;color:#0F4C5C;font-size:14px;font-weight:700;">💬 Message</h3><p style="margin:0;background:#E1F5FE;padding:14px;border-radius:8px;font-size:13px;line-height:1.6;white-space:pre-wrap;">${cv.message}</p>` : ""}
+                  ${cv.fileName ? `<h3 style="margin:20px 0 8px;color:#0F4C5C;font-size:14px;font-weight:700;">📎 CV File</h3><p style="margin:0;font-size:13px;font-weight:600;">${cv.fileName} (${(cv.fileSize / 1024).toFixed(1)} KB)</p>` : ""}
+                  <div style="text-align:center;margin-top:28px;">
+                    <a href="${process.env.CLIENT_URL}/admin/cvs" style="display:inline-block;background:linear-gradient(135deg,#4FC3F7,#29B6F6);color:#0F4C5C;padding:12px 28px;border-radius:999px;text-decoration:none;font-weight:800;font-size:13px;">View In Admin Panel</a>
+                  </div>
+                </td>
+              </tr>
+              <tr><td style="background:#F0F7FA;padding:16px;text-align:center;"><p style="margin:0;color:#94a3b8;font-size:11px;">© ${new Date().getFullYear()} Ali Hajveri International (Pvt.) Ltd.</p></td></tr>
+            </table>
+          </div>
+        `,
+      });
+    } catch (emailError) {
+      console.error("⚠️ Admin CV notification email failed:", emailError);
+    }
 
     res.status(201).json({ success: true, cv });
   } catch (err) {
